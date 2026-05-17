@@ -36,10 +36,11 @@ public class OrderProcessor {
      *
      * @param inventoryService the inventory checker (non-null)
      * @param paymentGateway   the payment processor (non-null)
+        * <p>The constructor enforces the non-null contract with Java {@code assert} statements.
      */
     public OrderProcessor(InventoryService inventoryService, PaymentGateway paymentGateway) {
-        if (inventoryService == null) throw new IllegalArgumentException("inventoryService must not be null");
-        if (paymentGateway   == null) throw new IllegalArgumentException("paymentGateway must not be null");
+        assert inventoryService != null : "inventoryService must not be null";
+        assert paymentGateway != null : "paymentGateway must not be null";
         this.inventoryService = inventoryService;
         this.paymentGateway   = paymentGateway;
     }
@@ -53,14 +54,12 @@ public class OrderProcessor {
      *         insufficient or payment fails
      * @throws IllegalArgumentException if {@code customerId} is null/blank or
      *                                  {@code cart} is null or empty
+    * <p>The pre-conditions are enforced with Java {@code assert} statements.
      */
     public Order process(String customerId, ShoppingCart cart) {
-        if (customerId == null || customerId.isBlank())
-            throw new IllegalArgumentException("customerId must not be null or blank");
-        if (cart == null)
-            throw new IllegalArgumentException("cart must not be null");
-        if (cart.itemCount() == 0)
-            throw new IllegalArgumentException("cart must not be empty");
+        assert customerId != null && !customerId.isBlank() : "customerId must not be null or blank";
+        assert cart != null : "cart must not be null";
+        assert cart.itemCount() > 0 : "cart must not be empty";
 
         // Step 1: check inventory for every cart line
         for (CartItem item : cart.getItems()) {

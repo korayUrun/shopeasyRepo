@@ -26,23 +26,32 @@ public class ShoppingCart {
      *
      * <p><em>Pre-condition (Task 3):</em> {@code product != null}, {@code quantity > 0}<br>
      * <em>Post-condition (Task 3):</em> cart contains an entry for {@code product};
-     * total number of distinct items in the cart >= previous count.
+        * total number of distinct items in the cart >= previous count.
+        * The method enforces these contracts with Java {@code assert} statements.
      *
      * @param product  the product to add (must not be null)
      * @param quantity number of units to add (must be > 0)
      */
     public void addItem(Product product, int quantity) {
-        // TODO (Task 3): add assert pre-condition here
+        assert product != null : "product must not be null";
+        assert quantity > 0 : "quantity must be > 0";
+
+        int previousCount = items.size();
+        boolean updatedExistingItem = false;
 
         for (CartItem item : items) {
             if (item.getProduct().getId().equals(product.getId())) {
                 item.setQuantity(item.getQuantity() + quantity);
-                // TODO (Task 3): add assert post-condition here
+                updatedExistingItem = true;
+                assert items.size() == previousCount : "cart size must stay the same when updating an existing product";
+                assert total() >= 0 : "cart total must be >= 0";
                 return;
             }
         }
         items.add(new CartItem(product, quantity));
-        // TODO (Task 3): add assert post-condition here
+        assert !updatedExistingItem : "new item path must not update an existing product";
+        assert items.size() == previousCount + 1 : "cart size must increase by 1 when adding a new product";
+        assert total() >= 0 : "cart total must be >= 0";
     }
 
     /**
@@ -67,6 +76,7 @@ public class ShoppingCart {
         for (CartItem item : items) {
             if (item.getProduct().getId().equals(productId)) {
                 item.setQuantity(quantity);
+                assert total() >= 0 : "cart total must be >= 0";
                 return;
             }
         }
@@ -80,18 +90,23 @@ public class ShoppingCart {
      *
      * <p><em>Pre-condition (Task 3):</em> {@code 0 <= discountRate <= 100}<br>
      * <em>Post-condition (Task 3):</em> returned value &lt;= {@link #total()} when
-     * {@code discountRate > 0}.
+        * {@code discountRate > 0}. The method enforces these contracts with Java
+        * {@code assert} statements.
      *
      * @param discountRate percentage discount to apply, in [0, 100]
      * @return the total after applying the discount
      */
     public double applyDiscount(double discountRate) {
-        // TODO (Task 3): add assert pre-condition here
+        assert discountRate >= 0 && discountRate <= 100 : "discountRate must be in [0, 100]";
 
         double rawTotal = total();
         double discounted = rawTotal - (rawTotal * discountRate / 100);
 
-        // TODO (Task 3): add assert post-condition here
+        if (discountRate > 0) {
+            assert discounted <= rawTotal : "discounted total must not exceed the raw total";
+        }
+        assert discounted >= 0 : "discounted total must be >= 0";
+        assert total() >= 0 : "cart total must be >= 0";
         return discounted;
     }
 
@@ -127,6 +142,7 @@ public class ShoppingCart {
      */
     public void clear() {
         items.clear();
+        assert total() >= 0 : "cart total must be >= 0";
     }
 
     @Override

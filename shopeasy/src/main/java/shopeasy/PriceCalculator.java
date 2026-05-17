@@ -27,7 +27,8 @@ public class PriceCalculator {
      *   <li>{@code 0 <= taxRate <= 100}</li>
      * </ul>
      *
-     * <p><em>Post-condition (Task 3):</em> result >= 0
+    * <p><em>Post-condition (Task 3):</em> result >= 0.
+    * This method enforces the contract with Java {@code assert} statements.
      *
      * @param basePrice    the original price before any adjustments (>= 0)
      * @param discountRate the discount percentage to apply, in [0, 100]
@@ -35,12 +36,14 @@ public class PriceCalculator {
      * @return             the final price
      */
     public double calculate(double basePrice, double discountRate, double taxRate) {
-        // TODO (Task 3): add assert pre-conditions here
+        assert basePrice >= 0 : "basePrice must be >= 0";
+        assert discountRate >= 0 && discountRate <= 100 : "discountRate must be in [0, 100]";
+        assert taxRate >= 0 && taxRate <= 100 : "taxRate must be in [0, 100]";
 
         double discounted = basePrice * (1.0 - discountRate / 100.0);
         double withTax    = discounted + (discounted * taxRate / 100.0);
 
-        // TODO (Task 3): add assert post-condition here
+        assert withTax >= 0 : "final price must be >= 0";
         return withTax;
     }
 
