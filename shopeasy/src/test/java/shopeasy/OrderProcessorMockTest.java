@@ -1,6 +1,5 @@
 package shopeasy;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -11,72 +10,86 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Task 5 – Mocks &amp; Stubs (Chapter 6)
- *
- * <p>Target class: {@link OrderProcessor}
- *
- * <p>Use Mockito to mock {@link InventoryService} and {@link PaymentGateway},
- * then test {@link OrderProcessor#process(String, ShoppingCart)} in isolation.
- *
- * <h3>Required scenarios (at least 4)</h3>
- * <ol>
- *   <li><b>Happy path</b> — inventory available, payment succeeds → non-null {@link Order} returned.</li>
- *   <li><b>Inventory failure</b> — {@code isAvailable()} returns {@code false} for at least one item
- *       → method returns {@code null} AND {@code charge()} is <em>never</em> called.</li>
- *   <li><b>Payment failure</b> — inventory OK, {@code charge()} returns {@code false}
- *       → method returns {@code null}.</li>
- *   <li><b>Partial quantity</b> — define the expected behaviour when only some items
- *       pass the inventory check, and write a test for it.</li>
- * </ol>
- *
- * <h3>Verification</h3>
- * Use {@code verify(paymentGateway, never()).charge(...)} to assert that
- * payment is never attempted when inventory is insufficient.
- *
- * <h3>Reflection (add to your report)</h3>
- * Answer: What does mocking allow you to test that you could not test otherwise?
- * What does it prevent you from testing? When is mocking a bad idea?
+ * Mockito-based unit tests for {@link OrderProcessor} isolating external services.
  */
 @ExtendWith(MockitoExtension.class)
 class OrderProcessorMockTest {
 
     @Mock
-    private InventoryService inventoryService;
+    InventoryService inventoryService;
 
     @Mock
-    private PaymentGateway paymentGateway;
+    PaymentGateway paymentGateway;
 
     @InjectMocks
-    private OrderProcessor orderProcessor;
+    OrderProcessor processor;
 
-    private ShoppingCart cart;
-    private Product widget;
+    @Test
+    void happyPath_inventoryAvailableAndPaymentSucceeds_returnsOrder() {
+        Product p = new Product("P1", "Prod", 10.0, 100);
+        ShoppingCart cart = new ShoppingCart();
+        cart.addItem(p, 2);
 
-    @BeforeEach
-    void setUp() {
-        cart   = new ShoppingCart();
-        widget = new Product("P001", "Widget", 25.0, 100);
+        when(inventoryService.isAvailable(p, 2)).thenReturn(true);
+        when(paymentGateway.charge("CUST-1", cart.total())).thenReturn(true);
+
+        Order order = processor.process("CUST-1", cart);
+
+        assertThat(order).isNotNull();
+        assertThat(order.getCustomerId()).isEqualTo("CUST-1");
+        assertThat(order.getTotal()).isEqualTo(cart.total());
+
+        verify(inventoryService).isAvailable(p, 2);
+        verify(paymentGateway).charge("CUST-1", cart.total());
     }
 
-    // -----------------------------------------------------------------------
-    // TODO: Write your mock-based tests below.
-    //
-    // EXAMPLE STRUCTURE — happy path:
-    //
-    // @Test
-    // void process_inventoryOkAndPaymentOk_returnsOrder() {
-    //     cart.addItem(widget, 2);
-    //
-    //     when(inventoryService.isAvailable(widget, 2)).thenReturn(true);
-    //     when(paymentGateway.charge("customer-1", 50.0)).thenReturn(true);
-    //
-    //     Order order = orderProcessor.process("customer-1", cart);
-    //
-    //     assertThat(order).isNotNull();
-    //     assertThat(order.getCustomerId()).isEqualTo("customer-1");
-    //     assertThat(order.getTotal()).isEqualTo(50.0);
-    //     verify(paymentGateway).charge("customer-1", 50.0);
-    // }
-    // -----------------------------------------------------------------------
+    @Test
+    void inventoryFailure_noPaymentAttempted_returnsNull() {
+        Product p = new Product("P2", "Prod2", 5.0, 0);
+        ShoppingCart cart = new ShoppingCart();
+        cart.addItem(p, 1);
 
-}
+        when(inventoryService.isAvailable(p, 1)).thenReturn(false);
+
+        Order order = processor.process("CUST-2", cart);
+
+        assertThat(order).isNull();
+        verify(inventoryService).isAvailable(p, 1);
+        verify(paymentGateway, never()).charge(anyString(), anyDouble());
+    }
+
+    @Test
+    void paymentFailure_inventoryOk_chargeFails_returnsNull() {
+        Product p = new Product("P3", "Prod3", 7.5, 10);
+        ShoppingCart cart = new ShoppingCart();
+        cart.addItem(p, 3);
+
+        when(inventoryService.isAvailable(p, 3)).thenReturn(true);
+        when(paymentGateway.charge("CUST-3", cart.total())).thenReturn(false);
+
+        Order order = processor.process("CUST-3", cart);
+
+        assertThat(order).isNull();
+        verify(inventoryService).isAvailable(p, 3);
+        verify(paymentGateway).charge("CUST-3", cart.total());
+    }
+
+    @Test
+    void partialQuantity_someItemsUnavailable_expectAbortAndNoCharge() {
+        Product a = new Product("PA", "A", 2.0, 5);
+        Product b = new Product("PB", "B", 3.0, 1);
+        ShoppingCart cart = new ShoppingCart();
+        cart.addItem(a, 2);
+        cart.addItem(b, 4); // requesting more than available
+
+        when(inventoryService.isAvailable(a, 2)).thenReturn(true);
+        when(inventoryService.isAvailable(b, 4)).thenReturn(false);
+
+        Order order = processor.process("CUST-4", cart);
+
+        assertThat(order).isNull();
+        verify(inventoryService).isAvailable(a, 2);
+        verify(inventoryService).isAvailable(b, 4);
+        verify(paymentGateway, never()).charge(anyString(), anyDouble());
+    }
+    }

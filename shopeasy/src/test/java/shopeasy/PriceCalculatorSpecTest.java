@@ -99,15 +99,17 @@ class PriceCalculatorSpecTest {
     /** Edge/invalid: negative discount (outside pre-condition) — treated by formula (increases price) */
     @Test
     void negativeDiscountIncreasesPriceAccordingToFormula() {
-        // base=100, discount=-10% => 110
-        assertThat(calculator.calculate(100.0, -10.0, 0.0)).isCloseTo(110.0, within(0.001));
+        // pre-condition added: discountRate must be in [0,100] — now triggers assertion
+        assertThatThrownBy(() -> calculator.calculate(100.0, -10.0, 0.0))
+                .isInstanceOf(AssertionError.class);
     }
 
     /** Edge/invalid: discount > 100% (outside pre-condition) — formula produces negative intermediate price */
     @Test
     void discountOverHundredProducesNegativeIntermediatePrice() {
-        // base=100, discount=150% => discounted = -50
-        assertThat(calculator.calculate(100.0, 150.0, 0.0)).isCloseTo(-50.0, within(0.001));
+        // pre-condition added: discountRate must be in [0,100] — now triggers assertion
+        assertThatThrownBy(() -> calculator.calculate(100.0, 150.0, 0.0))
+                .isInstanceOf(AssertionError.class);
     }
 
     // -----------------------------------------------------------------------
