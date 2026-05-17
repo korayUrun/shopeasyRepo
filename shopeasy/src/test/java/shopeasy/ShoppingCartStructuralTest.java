@@ -3,57 +3,102 @@ package shopeasy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.*;
 
-/**
- * Task 2 – Structural Testing &amp; Code Coverage (Chapter 3)
- *
- * <p>Target class: {@link ShoppingCart}
- *
- * <h3>Workflow</h3>
- * <ol>
- *   <li>Write an initial test suite based on the specification (Javadoc of ShoppingCart).</li>
- *   <li>Run {@code mvn test} to generate the JaCoCo report:
- *       <pre>  target/site/jacoco/index.html</pre></li>
- *   <li>Open the report, navigate to {@code ShoppingCart}, and identify uncovered branches.</li>
- *   <li>Add tests specifically to cover those branches until branch coverage &gt;= 80%.</li>
- *   <li>Take a screenshot of the final JaCoCo summary and put it in {@code report/jacoco-screenshot.png}.</li>
- * </ol>
- *
- * <h3>Branches to think about</h3>
- * <ul>
- *   <li>{@code addItem}: product already in cart vs. new product</li>
- *   <li>{@code removeItem}: product found vs. not found in cart</li>
- *   <li>{@code updateQuantity}: product found vs. not found, quantity valid vs. invalid</li>
- *   <li>{@code applyDiscount}: zero discount, positive discount</li>
- *   <li>{@code total}: empty cart vs. non-empty cart</li>
- * </ul>
- *
- * <h3>Bonus (PIT Mutation Testing)</h3>
- * Run: {@code mvn org.pitest:pitest-maven:mutationCoverage}
- * <br>Examine the HTML report in {@code target/pit-reports/}. Find two surviving mutants,
- * explain why each survived, and describe a test that would kill it. Add this analysis
- * to your reflection report.
- */
 class ShoppingCartStructuralTest {
 
     private ShoppingCart cart;
-    private Product apple;
-    private Product banana;
+    private Product p1;
+    private Product p2;
 
     @BeforeEach
     void setUp() {
-        cart   = new ShoppingCart();
-        apple  = new Product("P001", "Apple",  1.50, 100);
-        banana = new Product("P002", "Banana", 0.80, 50);
+        cart = new ShoppingCart();
+        p1 = new Product("p1", "Widget", 10.0, 100);
+        p2 = new Product("p2", "Gadget", 5.0, 50);
     }
 
-    // -----------------------------------------------------------------------
-    // TODO: Write your tests below.
-    //
-    // Start with happy-path tests, then add tests that target specific branches.
-    //
-    // HINT: Run `mvn test` after every few tests to see coverage progress.
-    // -----------------------------------------------------------------------
+    /** New product added -> increases itemCount and total */
+    @Test
+    void addNewItemIncreasesCountAndTotal() {
+        cart.addItem(p1, 2);
+        assertThat(cart.itemCount()).isEqualTo(1);
+        assertThat(cart.total()).isEqualTo(20.0);
+    }
 
+    /** Adding same product again merges quantities into existing line */
+    @Test
+    void addExistingProductMergesQuantities() {
+        cart.addItem(p1, 1);
+        cart.addItem(p1, 3);
+        assertThat(cart.itemCount()).isEqualTo(1);
+        assertThat(cart.getItems().get(0).getQuantity()).isEqualTo(4);
+        assertThat(cart.total()).isEqualTo(40.0);
+    }
+
+    /** Removing an absent product does nothing (no exception) */
+    @Test
+    void removeNonExistingProductDoesNothing() {
+        cart.addItem(p1, 1);
+        cart.removeItem("no-such-id");
+        assertThat(cart.itemCount()).isEqualTo(1);
+    }
+
+    /** Update quantity success path: updates subtotal and total */
+    @Test
+    void updateQuantityUpdatesSubtotal() {
+        cart.addItem(p2, 2); // subtotal 10
+        cart.updateQuantity("p2", 5); // subtotal 25
+        assertThat(cart.getItems()).hasSize(1);
+        assertThat(cart.getItems().get(0).getQuantity()).isEqualTo(5);
+        assertThat(cart.total()).isEqualTo(25.0);
+    }
+
+    /** updateQuantity with non-positive quantity throws IllegalArgumentException */
+    @Test
+    void updateQuantityWithNonPositiveThrows() {
+        cart.addItem(p1, 1);
+        assertThatThrownBy(() -> cart.updateQuantity("p1", 0))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Quantity must be > 0");
+    }
+
+    /** updateQuantity for missing product throws IllegalArgumentException */
+    @Test
+    void updateQuantityMissingProductThrows() {
+        assertThatThrownBy(() -> cart.updateQuantity("missing", 2))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Product not found");
+    }
+
+    /** applyDiscount: 0% returns same total, 100% returns zero */
+    @Test
+    void applyDiscountZeroAndFull() {
+        cart.addItem(p1, 2); // 20
+        assertThat(cart.applyDiscount(0.0)).isEqualTo(20.0);
+        assertThat(cart.applyDiscount(100.0)).isEqualTo(0.0);
+    }
+
+    /** getItems returns an unmodifiable view */
+    @Test
+    void getItemsIsUnmodifiable() {
+        cart.addItem(p1, 1);
+        List<CartItem> items = cart.getItems();
+        assertThatThrownBy(() -> items.add(new CartItem(p2, 1)))
+                .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    /** clear empties the cart and toString reflects empty state */
+    @Test
+    void clearEmptiesCartAndToStringReflectsIt() {
+        cart.addItem(p1, 1);
+        cart.addItem(p2, 2);
+        cart.clear();
+        assertThat(cart.itemCount()).isEqualTo(0);
+        assertThat(cart.total()).isEqualTo(0.0);
+        assertThat(cart.getItems()).isEmpty();
+    }
 }
+

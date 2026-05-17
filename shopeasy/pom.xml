@@ -62,7 +62,8 @@
                 <version>3.2.5</version>
                 <configuration>
                     <!-- Enable Java assertions for Design by Contract (Task 3) -->
-                    <argLine>@{argLine} -ea</argLine>
+                    <!-- Use Maven property expansion so external tools (PIT) can override argLine -->
+                    <argLine>${argLine} -ea</argLine>
                 </configuration>
             </plugin>
 
